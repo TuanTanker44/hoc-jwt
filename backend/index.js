@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
+import router from "./routes/auth.js";
 
 dotenv.config();
 
@@ -21,8 +22,11 @@ async function connectDB() {
   }
 }
 
+//Routes
+app.use("/v1/auth", router);
+
+connectDB();
+
 app.listen(8000, () => {
   console.log("Server is running on http://localhost:8000");
 });
-
-connectDB();
