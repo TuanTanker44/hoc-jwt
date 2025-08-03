@@ -1,5 +1,11 @@
 import { User } from "../models/User.js";
+import { RefreshToken } from "../models/RefreshToken.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import { v4 } from "uuid";
+
+dotenv.config();
 
 const authController = {
   registerUser: async (req, res) => {
@@ -9,7 +15,7 @@ const authController = {
       const hashed = await bcrypt.hash(req.body.password, salt);
 
       //Create new user
-      const newUser = await new User({
+      const newUser = new User({
         username: req.body.username,
         email: req.body.email,
         password: hashed,
@@ -20,6 +26,65 @@ const authController = {
       res.status(200).json(user);
     } catch (error) {
       res.status(500).json(error);
+    }
+  },
+
+  generateAccessToken: (user) => {
+    console.log("Generate access token for user:", user.username);
+    return jwt.sign(
+      { id: user.id, admin: user.admin, uuid: v4() },
+      process.env.JWT_ACCESS_KEY,
+      { expiresIn: "15s" }
+    );
+  },
+  generateRefreshToken: async (user) => {
+    console.log("Generate refresh token for user:", user.username);
+
+    try {
+      const existingTokenDoc = await RefreshToken.findOne({ userId: user.id });
+
+      // Nếu chưa có RT → tạo mới và lưu
+      if (!existingTokenDoc) {
+        const refreshToken = jwt.sign(
+          { id: user.id, admin: user.admin, uuid: v4() },
+          process.env.JWT_REFRESH_KEY,
+          { expiresIn: "7d" }
+        );
+
+        const newToken = new RefreshToken({
+          userId: user.id,
+          refreshToken: refreshToken,
+        });
+
+        await newToken.save();
+        return refreshToken;
+      }
+
+      // Nếu đã có RT → kiểm tra hạn
+      try {
+        jwt.verify(existingTokenDoc.refreshToken, process.env.JWT_REFRESH_KEY);
+        // Nếu token còn hạn → dùng lại
+        return existingTokenDoc.refreshToken;
+      } catch (err) {
+        if (err.name === "TokenExpiredError") {
+          // Token hết hạn → tạo mới và ghi đè
+          const newRefreshToken = jwt.sign(
+            { id: user.id, admin: user.admin, uuid: uuidv4() },
+            process.env.JWT_REFRESH_KEY,
+            { expiresIn: "7d" }
+          );
+
+          existingTokenDoc.refreshToken = newRefreshToken;
+          await existingTokenDoc.save();
+          return newRefreshToken;
+        } else {
+          console.error("Error verifying refresh token:", err);
+          throw err;
+        }
+      }
+    } catch (error) {
+      console.error("Error in generateRefreshToken:", error);
+      throw error;
     }
   },
 
@@ -37,12 +102,42 @@ const authController = {
       if (!validPassword) {
         res.status(404).json("Wrong password!");
       }
+      //Login success
       if (user && validPassword) {
-        res.status(200).json(user);
+        const accessToken = authController.generateAccessToken(user);
+        const refreshToken = authController.generateRefreshToken(user);
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "strict",
+        });
+        const { password, ...others } = user._doc;
+        res.status(200).json({ ...others, accessToken });
       }
     } catch (error) {
       res.status(500).json(error);
     }
+  },
+
+  //REDIS để lưu trữ refresh token
+  refreshToken: async (req, res) => {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json("You are not authenticated!");
+    }
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (err, user) => {
+      if (err) {
+        return res.status(403).json("Refresh token is not valid!");
+      }
+      const newAccessToken = authController.generateAccessToken(user);
+      const newRefreshToken = authController.generateRefreshToken(user);
+      res.cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+      });
+      res.status(200).json({ accessToken: newAccessToken });
+    });
   },
 };
 

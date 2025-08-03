@@ -4,5 +4,6 @@ import { authController } from "../controllers/authController.js";
 const router = Router();
 router.post("/register", authController.registerUser);
 router.post("/login", authController.loginUser);
+router.post("/refresh", authController.refreshToken);
 
 export default router;

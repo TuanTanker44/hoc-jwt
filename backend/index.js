@@ -3,7 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
-import router from "./routes/auth.js";
+import authRoute from "./routes/auth.js";
+import userRoute from "./routes/user.js";
 
 dotenv.config();
 
@@ -23,7 +24,8 @@ async function connectDB() {
 }
 
 //Routes
-app.use("/v1/auth", router);
+app.use("/v1/auth", authRoute);
+app.use("/v1/user", userRoute);
 
 connectDB();
 
