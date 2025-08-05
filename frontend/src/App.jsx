@@ -1,12 +1,15 @@
 /* eslint-disable no-unused-vars */
 import { useState } from "react";
-import { LoginForm } from "./pages/LoginPage/Login";
+import { Routes, Route } from "react-router-dom";
+import { LoginForm } from "./pages/LoginPage/Login.jsx";
+import { Messenger } from "./pages/MainPage/Messenger.jsx";
 
 function App() {
   return (
-    <div className="h-screen w-full bg-[lightblue] flex items-center justify-center">
-      <LoginForm />
-    </div>
+    <Routes>
+      <Route path="/login" element={<LoginForm />} />
+      <Route path="/messenger" element={<Messenger />} />
+    </Routes>
   );
 }
 
