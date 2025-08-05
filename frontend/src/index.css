@@ -1,3 +1,17 @@
+@import url("@fortawesome/fontawesome-free/css/all.min.css");
 @import "tailwindcss/preflight";
 @tailwind utilities;
-@import url("@fortawesome/fontawesome-free/css/all.min.css");
+:root {
+  --font-family-sans: "Inter", sans-serif;
+  --font-family-serif: "Merriweather", serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+
+  --color-bg: #ffffff;
+  --color-bg-alt: #f7fafc;
+  --color-fg: #2d3748;
+  --color-fg-alt: #718096;
+  --color-border: #edf2f7;
+  --color-primary: #3182ce;
+  --color-primary-hover: #2b6cb0;
+  --color-primary-active: #2c5282;
+}

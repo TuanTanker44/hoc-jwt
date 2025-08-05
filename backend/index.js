@@ -29,8 +29,8 @@ app.use("/v1/user", userRoute);
 
 connectDB();
 
-app.listen(8000, () => {
-  console.log("Server is running on http://localhost:8000");
+app.listen(5000, () => {
+  console.log("Server is running on http://localhost:5000");
 });
 app.get("/", (req, res) => {
   res.send("test server ");
