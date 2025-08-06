@@ -9,6 +9,10 @@ const RefreshTokenSchema = new mongoose.Schema(
   { collection: "refreshTokens" }
 );
 
-const RefreshToken = mongoose.model("RefreshToken", RefreshTokenSchema);
+const RefreshToken = mongoose.model(
+  "RefreshToken",
+  RefreshTokenSchema,
+  "refreshTokens"
+);
 
 export { RefreshToken };

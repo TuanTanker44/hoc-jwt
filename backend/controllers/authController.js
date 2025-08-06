@@ -34,7 +34,7 @@ const authController = {
     return jwt.sign(
       { id: user.id, admin: user.admin, uuid: v4() },
       process.env.JWT_ACCESS_KEY,
-      { expiresIn: "15s" }
+      { expiresIn: "10s" }
     );
   },
   generateRefreshToken: async (user) => {
@@ -62,25 +62,18 @@ const authController = {
 
       // Nếu đã có RT → kiểm tra hạn
       try {
-        jwt.verify(existingTokenDoc.refreshToken, process.env.JWT_REFRESH_KEY);
-        // Nếu token còn hạn → dùng lại
-        return existingTokenDoc.refreshToken;
-      } catch (err) {
-        if (err.name === "TokenExpiredError") {
-          // Token hết hạn → tạo mới và ghi đè
-          const newRefreshToken = jwt.sign(
-            { id: user.id, admin: user.admin, uuid: uuidv4() },
-            process.env.JWT_REFRESH_KEY,
-            { expiresIn: "7d" }
-          );
+        const newRefreshToken = jwt.sign(
+          { id: user.id, admin: user.admin, uuid: v4() },
+          process.env.JWT_REFRESH_KEY,
+          { expiresIn: "7d" }
+        );
 
-          existingTokenDoc.refreshToken = newRefreshToken;
-          await existingTokenDoc.save();
-          return newRefreshToken;
-        } else {
-          console.error("Error verifying refresh token:", err);
-          throw err;
-        }
+        existingTokenDoc.refreshToken = newRefreshToken;
+        await existingTokenDoc.save();
+        return newRefreshToken;
+      } catch (err) {
+        console.error("Error generating new refresh token:", err);
+        throw new Error("Failed to generate new refresh token");
       }
     } catch (error) {
       console.error("Error in generateRefreshToken:", error);
@@ -105,7 +98,7 @@ const authController = {
       //Login success
       if (user && validPassword) {
         const accessToken = authController.generateAccessToken(user);
-        const refreshToken = authController.generateRefreshToken(user);
+        const refreshToken = await authController.generateRefreshToken(user);
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           secure: true,
@@ -136,7 +129,7 @@ const authController = {
         secure: true,
         sameSite: "strict",
       });
-      res.status(200).json({ accessToken: newAccessToken });
+      res.status(200).json({ newAccessToken, newRefreshToken });
     });
   },
 };

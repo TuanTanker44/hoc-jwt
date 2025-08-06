@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { authController } from "../controllers/authController.js";
 import { RefreshToken } from "../models/RefreshToken.js";
+import { User } from "../models/User.js";
 
 dotenv.config();
 //điều kiện trước khi thực hiện các request trên server
@@ -20,15 +21,10 @@ const middlewareController = {
           return next();
         }
         if (err.name === "TokenExpiredError") {
-          if (!refreshToken) {
-            return res
-              .status(401)
-              .json("Refresh token missing. Please log in again.");
-          }
           let newAccessToken;
           try {
             const userWithToken = await RefreshToken.findOne({
-              userId: user.id,
+              refreshToken: refreshToken,
             });
             const savedToken = userWithToken.refreshToken;
             if (!savedToken) {
@@ -43,14 +39,21 @@ const middlewareController = {
                     .status(403)
                     .json("Refresh token expired. Please login again.");
                 }
-                newAccessToken = authController.generateAccessToken(user);
-                const newRefreshToken =
-                  authController.generateRefreshToken(user);
-                res.cookie("refreshToken", newRefreshToken, {
-                  httpOnly: true,
-                  secure: true,
-                  sameSite: "strict",
-                });
+                try {
+                  const currentUser = await User.findById(userWithToken.userId);
+                  newAccessToken =
+                    authController.generateAccessToken(currentUser);
+                  const newRefreshToken =
+                    authController.generateRefreshToken(currentUser);
+                  res.cookie("refreshToken", newRefreshToken, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: "strict",
+                  });
+                } catch (error) {
+                  console.error("Error fetching current user:", error);
+                  return res.status(500).json("Internal server error");
+                }
               }
             );
             res.setHeader("token", "Bearer " + newAccessToken);
