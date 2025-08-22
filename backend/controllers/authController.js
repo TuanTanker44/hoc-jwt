@@ -30,15 +30,25 @@ const authController = {
   },
 
   generateAccessToken: (user) => {
-    console.log("Generate access token for user:", user.username);
+    console.log(
+      "Generate access token for user:",
+      user.username,
+      "at",
+      new Date().toISOString()
+    );
     return jwt.sign(
       { id: user.id, admin: user.admin, uuid: v4() },
       process.env.JWT_ACCESS_KEY,
-      { expiresIn: "10s" }
+      { expiresIn: "4h" }
     );
   },
   generateRefreshToken: async (user) => {
-    console.log("Generate refresh token for user:", user.username);
+    console.log(
+      "Generate refresh token for user:",
+      user.username,
+      "at",
+      new Date().toISOString()
+    );
 
     try {
       const existingTokenDoc = await RefreshToken.findOne({ userId: user.id });
@@ -99,10 +109,15 @@ const authController = {
       if (user && validPassword) {
         const accessToken = authController.generateAccessToken(user);
         const refreshToken = await authController.generateRefreshToken(user);
-        res.cookie("refreshToken", refreshToken, {
+        res.cookie("accessToken", accessToken, {
           httpOnly: true,
           secure: true,
-          sameSite: "strict",
+          sameSite: "none",
+        });
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: true, //true : cookies chỉ hoạt động qua https
+          sameSite: "none", //lax: cookies chỉ gửi qua cùng một trang (domain)
         });
         const { password, ...others } = user._doc;
         res.status(200).json({ ...others, accessToken });
@@ -124,10 +139,15 @@ const authController = {
       }
       const newAccessToken = authController.generateAccessToken(user);
       const newRefreshToken = authController.generateRefreshToken(user);
+      res.cookie("accessToken", newAccessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+      });
       res.cookie("refreshToken", newRefreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "strict",
+        sameSite: "none",
       });
       res.status(200).json({ newAccessToken, newRefreshToken });
     });

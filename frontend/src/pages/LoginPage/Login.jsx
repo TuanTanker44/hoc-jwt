@@ -1,36 +1,41 @@
-import { useState } from "react";
-import login_bg from "../../assets/login_bg.png";
-import axios from "axios";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import login_bg from "../../assets/login_bg.png";
 
 export const LoginForm = () => {
+  const navigate = useNavigate();
   const [username, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
+  const { login, currentUser } = useAuth();
+
+  const handleToggleShowPassword = () => {
+    setShowPassword((prev) => !prev);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     try {
-      const res = await axios.post("http://localhost:5000/v1/auth/login", {
-        username,
-        password,
-      });
-
-      // Lưu token hoặc thông tin xác thực nếu cần
-      localStorage.setItem("token", res.data.token);
-
-      // Chuyển hướng
-      navigate("/messenger");
+      await login(username, password);
     } catch (error) {
       alert("Đăng nhập thất bại", error);
     }
   };
 
-  const handleToggleShowPassword = () => {
-    setShowPassword((prev) => !prev);
-  };
+  useEffect(() => {
+    const savedUsername = document.getElementById("username")?.value || "";
+    const savedPassword = document.getElementById("password")?.value || "";
+    if (savedUsername) setUserName(savedUsername);
+    if (savedPassword) setPassword(savedPassword);
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/messenger");
+    }
+  }, [currentUser, navigate]);
+
   return (
     <div
       className="h-screen w-full flex items-center justify-center"
@@ -56,6 +61,7 @@ export const LoginForm = () => {
               type="text"
               id="username"
               value={username}
+              autoComplete="username"
               onChange={(e) => setUserName(e.target.value)}
               className="peer w-[22rem] border-2 border-[#000] rounded-[10px] pl-[20px] h-[44px] 
                             focus:border-[#fb6f92] focus:outline-none"
@@ -81,6 +87,7 @@ export const LoginForm = () => {
               type={showPassword ? "text" : "password"}
               id="password"
               value={password}
+              autoComplete="current-password"
               onChange={(e) => setPassword(e.target.value)}
               className="peer w-[22rem] border-2 border-[#000] rounded-[10px] pl-[20px] h-[44px] 
                             focus:border-[#fb6f92] focus:outline-none"
@@ -103,7 +110,7 @@ export const LoginForm = () => {
             <button
               type="button"
               onClick={handleToggleShowPassword}
-              className={`absolute right-[8px] top-[5px] p-[5px] bg-[#EAD4EC]
+              className={`absolute right-[5px] top-[5px] p-[5px] bg-[#FEEFF9]
                             ${password ? "block" : "hidden"}
                         `}
             >
