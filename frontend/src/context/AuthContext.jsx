@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react";
 import axios from "axios";
 
 const AuthContext = createContext();
@@ -6,6 +6,28 @@ const AuthContext = createContext();
 const AuthProvider = ({ children }) => {
   const [accessToken, setAccessToken] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      try {
+        const meRes = await axios.get("http://localhost:5000/v1/user/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        });
+        setCurrentUser(meRes.data);
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+        setCurrentUser(null);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   // Hàm login
   const login = async (username, password) => {
@@ -17,8 +39,7 @@ const AuthProvider = ({ children }) => {
         { withCredentials: true },
       );
       setAccessToken(loginRes.data.accessToken);
-
-      console.log("Login successful, access token:", loginRes.data.accessToken);
+      localStorage.setItem("accessToken", loginRes.data.accessToken);
 
       // Gọi API /me để lấy thông tin user
       try {
@@ -47,6 +68,8 @@ const AuthProvider = ({ children }) => {
         {},
         { withCredentials: true },
       );
+      setCurrentUser(null);
+      localStorage.removeItem("currentUser");
     } catch (err) {
       console.error("Logout failed", err);
     } finally {
@@ -60,7 +83,7 @@ const AuthProvider = ({ children }) => {
         "http://localhost:5000/v1/user/me/chatItems",
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
           withCredentials: true,
         },

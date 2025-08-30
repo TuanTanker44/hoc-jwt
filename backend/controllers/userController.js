@@ -60,7 +60,7 @@ const userController = {
           if (!user) {
             return res.status(404).json("User not found!");
           }
-          const { password, ...others } = user._doc;
+          const { password, accessToken, ...others } = user._doc;
           res.status(200).json(others);
         })
         .catch((err) => {

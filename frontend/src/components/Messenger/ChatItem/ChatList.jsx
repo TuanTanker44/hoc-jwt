@@ -1,23 +1,24 @@
 import PropTypes from "prop-types";
 import "./ChatList.css";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import ChatItem from "./ChatItem.jsx";
 import axios from "axios";
 import { useAuth } from "../../../hooks/useAuth.js";
 
 const ChatList = ({ chatList, onActiveChange }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const { accessToken, currentUser } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  const { currentUser } = useAuth();
   const [chatNames, setChatNames] = useState({});
   const [lastMessages, setLastMessages] = useState({});
 
-  const handleActive = useCallback(
-    (idx) => {
-      setActiveIndex(idx);
-      if (onActiveChange) onActiveChange(chatList[idx], idx);
-    },
-    [onActiveChange, chatList],
-  );
+  const handleActiveChat = (index) => {
+    setActiveIndex(index);
+    const clickedChat = chatList[index];
+    if (!clickedChat) return;
+    const chatName = chatNames[clickedChat.chatId]?.trim() || "Đang tải...";
+    onActiveChange?.(clickedChat, chatName, index);
+  };
 
   const getChatName = async (chatId) => {
     try {
@@ -50,23 +51,37 @@ const ChatList = ({ chatList, onActiveChange }) => {
       return response.data.message;
     } catch (error) {
       console.error("Failed to fetch last message:", error);
-      return "";
+      return "Chưa có tin nhắn nào";
     }
   };
 
   // Gọi handleActive(0) khi component mount
   useEffect(() => {
-    handleActive(0);
-  }, [handleActive]);
+    handleActiveChat(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    chatList.forEach(async (chat) => {
-      const name = await getChatName(chat.chatId);
-      setChatNames((prev) => ({ ...prev, [chat.chatId]: name }));
+    if (!chatList || chatList.length === 0) return;
 
-      const lastMsg = await getLastMessage(chat.lastMessage);
-      setLastMessages((prev) => ({ ...prev, [chat.chatId]: lastMsg }));
-    });
+    const fetchData = async () => {
+      const names = {};
+      const messages = {};
+
+      await Promise.all(
+        chatList.map(async (chat) => {
+          const name = await getChatName(chat.chatId);
+          const lastMsg = await getLastMessage(chat.lastMessage);
+          names[chat.chatId] = name;
+          messages[chat.chatId] = lastMsg;
+        }),
+      );
+
+      setChatNames(names);
+      setLastMessages(messages);
+    };
+
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatList, accessToken]);
   return (
@@ -75,9 +90,9 @@ const ChatList = ({ chatList, onActiveChange }) => {
         <ChatItem
           key={idx}
           chatName={chatNames[chat.chatId] || "Đang tải..."}
-          chatPreview={lastMessages[chat.chatId] || ""}
+          chatPreview={lastMessages[chat.chatId] || "Đang tải..."}
           isActive={activeIndex === idx}
-          onClick={() => handleActive(idx)}
+          onClick={() => handleActiveChat(idx)}
         />
       ))}
     </div>

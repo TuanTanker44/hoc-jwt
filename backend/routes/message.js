@@ -16,4 +16,10 @@ router.get(
   messageController.getMessageById
 );
 
+router.post(
+  "/chat/:chatId",
+  middlewareController.verifyToken,
+  messageController.createTextMessage
+);
+
 export default router;
