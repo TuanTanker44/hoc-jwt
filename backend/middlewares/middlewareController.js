@@ -2,72 +2,28 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { authController } from "../controllers/authController.js";
 import { RefreshToken } from "../models/RefreshToken.js";
+import { User } from "../models/User.js";
 
 dotenv.config();
 //điều kiện trước khi thực hiện các request trên server
 const middlewareController = {
   verifyToken: (req, res, next) => {
-    const token = req.headers.token;
-    if (token) {
-      const accessToken = token.split(" ")[1];
-      const refreshToken = req.cookies.refreshToken;
-      if (!accessToken) {
-        return res.status(401).json("Access token is missing!");
-      }
-      jwt.verify(accessToken, process.env.JWT_ACCESS_KEY, async (err, user) => {
-        if (!err) {
-          req.user = user;
-          return next();
-        }
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json("You are not authenticated!");
+
+    const accessToken = authHeader.split(" ")[1];
+    jwt.verify(accessToken, process.env.JWT_ACCESS_KEY, (err, user) => {
+      if (err) {
         if (err.name === "TokenExpiredError") {
-          if (!refreshToken) {
-            return res
-              .status(401)
-              .json("Refresh token missing. Please log in again.");
-          }
-          let newAccessToken;
-          try {
-            const userWithToken = await RefreshToken.findOne({
-              userId: user.id,
-            });
-            const savedToken = userWithToken.refreshToken;
-            if (!savedToken) {
-              return res.status(403).json("Refresh token is not valid!");
-            }
-            jwt.verify(
-              refreshToken,
-              process.env.JWT_REFRESH_KEY,
-              async (err, user) => {
-                if (err) {
-                  return res
-                    .status(403)
-                    .json("Refresh token expired. Please login again.");
-                }
-                newAccessToken = authController.generateAccessToken(user);
-                const newRefreshToken =
-                  authController.generateRefreshToken(user);
-                res.cookie("refreshToken", newRefreshToken, {
-                  httpOnly: true,
-                  secure: true,
-                  sameSite: "strict",
-                });
-              }
-            );
-            res.setHeader("token", "Bearer " + newAccessToken);
-            req.user = user;
-            return next();
-          } catch (error) {
-            console.error("Error refreshing token:", error);
-            return res.status(500).json("Internal server error");
-          }
-        } else {
-          return res.status(403).json("Token is not valid!");
+          return res.status(401).json({ message: "Access token expired" });
         }
-      });
-    } else {
-      return res.status(401).json("You are not authenticated!");
-    }
+        return res.status(403).json("Token is not valid!");
+      }
+      req.user = user;
+      next();
+    });
   },
+
   verifyTokenAndAuthorization: (req, res, next) => {
     middlewareController.verifyToken(req, res, () => {
       if (req.user.id === req.params.id || req.user.admin) {

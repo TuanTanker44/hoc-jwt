@@ -30,15 +30,25 @@ const authController = {
   },
 
   generateAccessToken: (user) => {
-    console.log("Generate access token for user:", user.username);
+    console.log(
+      "Generate access token for user:",
+      user.username,
+      "at",
+      new Date().toISOString()
+    );
     return jwt.sign(
       { id: user.id, admin: user.admin, uuid: v4() },
       process.env.JWT_ACCESS_KEY,
-      { expiresIn: "15s" }
+      { expiresIn: "4h" }
     );
   },
   generateRefreshToken: async (user) => {
-    console.log("Generate refresh token for user:", user.username);
+    console.log(
+      "Generate refresh token for user:",
+      user.username,
+      "at",
+      new Date().toISOString()
+    );
 
     try {
       const existingTokenDoc = await RefreshToken.findOne({ userId: user.id });
@@ -62,25 +72,18 @@ const authController = {
 
       // Nếu đã có RT → kiểm tra hạn
       try {
-        jwt.verify(existingTokenDoc.refreshToken, process.env.JWT_REFRESH_KEY);
-        // Nếu token còn hạn → dùng lại
-        return existingTokenDoc.refreshToken;
-      } catch (err) {
-        if (err.name === "TokenExpiredError") {
-          // Token hết hạn → tạo mới và ghi đè
-          const newRefreshToken = jwt.sign(
-            { id: user.id, admin: user.admin, uuid: uuidv4() },
-            process.env.JWT_REFRESH_KEY,
-            { expiresIn: "7d" }
-          );
+        const newRefreshToken = jwt.sign(
+          { id: user.id, admin: user.admin, uuid: v4() },
+          process.env.JWT_REFRESH_KEY,
+          { expiresIn: "7d" }
+        );
 
-          existingTokenDoc.refreshToken = newRefreshToken;
-          await existingTokenDoc.save();
-          return newRefreshToken;
-        } else {
-          console.error("Error verifying refresh token:", err);
-          throw err;
-        }
+        existingTokenDoc.refreshToken = newRefreshToken;
+        await existingTokenDoc.save();
+        return newRefreshToken;
+      } catch (err) {
+        console.error("Error generating new refresh token:", err);
+        throw new Error("Failed to generate new refresh token");
       }
     } catch (error) {
       console.error("Error in generateRefreshToken:", error);
@@ -105,11 +108,16 @@ const authController = {
       //Login success
       if (user && validPassword) {
         const accessToken = authController.generateAccessToken(user);
-        const refreshToken = authController.generateRefreshToken(user);
-        res.cookie("refreshToken", refreshToken, {
+        const refreshToken = await authController.generateRefreshToken(user);
+        res.cookie("accessToken", accessToken, {
           httpOnly: true,
           secure: true,
-          sameSite: "strict",
+          sameSite: "none",
+        });
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: true, //true : cookies chỉ hoạt động qua https
+          sameSite: "none", //lax: cookies chỉ gửi qua cùng một trang (domain)
         });
         const { password, ...others } = user._doc;
         res.status(200).json({ ...others, accessToken });
@@ -131,12 +139,13 @@ const authController = {
       }
       const newAccessToken = authController.generateAccessToken(user);
       const newRefreshToken = authController.generateRefreshToken(user);
+      localStorage.setItem("accessToken", newRefreshToken);
       res.cookie("refreshToken", newRefreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "strict",
+        sameSite: "none",
       });
-      res.status(200).json({ accessToken: newAccessToken });
+      res.status(200).json({ newAccessToken });
     });
   },
 };

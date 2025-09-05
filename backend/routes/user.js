@@ -10,5 +10,21 @@ router.delete(
   middlewareController.verifyTokenAndAuthorization,
   userController.deleteUser
 );
+router.get("/me", middlewareController.verifyToken, userController.getMe);
+router.get(
+  "/me/chatItems",
+  middlewareController.verifyToken,
+  userController.getChatItems
+);
+router.post(
+  "/:roomId",
+  middlewareController.verifyToken,
+  userController.sendMessage
+);
+router.patch(
+  "/alterLastMessageWithChatId/:chatId",
+  middlewareController.verifyToken,
+  userController.alterLastMessageWithChatId
+);
 
 export default router;

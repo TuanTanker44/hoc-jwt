@@ -1,11 +1,11 @@
 import "./ChatMessages.css";
-import { Message } from "./Massage.jsx";
+import { Message } from "./Message.jsx";
 
 const ChatMessages = ({ messages }) => {
   return (
     <div className="chat-messages">
       {messages.map((msg, index) => (
-        <Message key={index} content={msg.text} fromMe={msg.fromMe} />
+        <Message key={index} content={msg.message} fromMe={msg.fromMe} />
       ))}
     </div>
   );

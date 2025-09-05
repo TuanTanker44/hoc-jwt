@@ -25,6 +25,28 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    name: {
+      type: String,
+      require: true,
+      minlength: 2,
+      maxlength: 100,
+    },
+    chatItems: [
+      {
+        chatId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Room",
+        },
+        lastMessage: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Message",
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

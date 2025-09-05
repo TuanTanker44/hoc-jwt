@@ -1,48 +1,106 @@
+import PropTypes from "prop-types";
 import "./ChatList.css";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ChatItem from "./ChatItem.jsx";
+import axios from "axios";
+import { useAuth } from "../../../hooks/useAuth.js";
 
-const ChatList = ({ onActiveChange }) => {
+const ChatList = ({ chatList, onActiveChange }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const chatList = [
-    {
-      chatName: "Nguyễn Văn A",
-      chatPreview: "Hello! Bạn đang làm gì thế?",
-    },
-    {
-      chatName: "Trần Thị B",
-      chatPreview: "Mình đang học HTML CSS 😄",
-    },
-    {
-      chatName: "Lê Văn C",
-      chatPreview: "Wow, cố lên nhé!",
-    },
-  ];
+  const accessToken = localStorage.getItem("accessToken");
+  const { currentUser } = useAuth();
+  const [chatNames, setChatNames] = useState({});
+  const [lastMessages, setLastMessages] = useState({});
 
-  // Khi đổi active, gọi callback để báo cho cha
-  const handleActive = (idx) => {
-    setActiveIndex(idx);
-    if (onActiveChange) onActiveChange(chatList[idx], idx);
+  const handleActiveChat = (index) => {
+    setActiveIndex(index);
+    const clickedChat = chatList[index];
+    if (!clickedChat) return;
+    const chatName = chatNames[clickedChat.chatId]?.trim() || "Đang tải...";
+    onActiveChange?.(clickedChat, chatName, index);
+  };
+
+  const getChatName = async (chatId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/v1/chat/${chatId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      const isGroup = response.data.isGroup;
+      const chatName = isGroup
+        ? response.data.name
+        : response.data.participants.find((p) => p._id !== currentUser._id)
+            .name;
+      return chatName;
+    } catch (error) {
+      console.error("Failed to fetch chat name:", error);
+      return "Người dùng không khả dụng";
+    }
+  };
+
+  const getLastMessage = async (messageId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/v1/message/${messageId}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      return response.data.message;
+    } catch (error) {
+      console.error("Failed to fetch last message:", error);
+      return "Chưa có tin nhắn nào";
+    }
   };
 
   // Gọi handleActive(0) khi component mount
-  React.useEffect(() => {
-    handleActive(0);
-    // eslint-disable-next-line
+  useEffect(() => {
+    handleActiveChat(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!chatList || chatList.length === 0) return;
+
+    const fetchData = async () => {
+      const names = {};
+      const messages = {};
+
+      await Promise.all(
+        chatList.map(async (chat) => {
+          const name = await getChatName(chat.chatId);
+          const lastMsg = await getLastMessage(chat.lastMessage);
+          names[chat.chatId] = name;
+          messages[chat.chatId] = lastMsg;
+        }),
+      );
+
+      setChatNames(names);
+      setLastMessages(messages);
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatList, accessToken]);
   return (
     <div className="chat-list">
       {chatList.map((chat, idx) => (
         <ChatItem
-          key={chat.chatName}
-          chatName={chat.chatName}
-          chatPreview={chat.chatPreview}
+          key={idx}
+          chatName={chatNames[chat.chatId] || "Đang tải..."}
+          chatPreview={lastMessages[chat.chatId] || "Đang tải..."}
           isActive={activeIndex === idx}
-          onClick={() => handleActive(idx)}
+          onClick={() => handleActiveChat(idx)}
         />
       ))}
     </div>
   );
+};
+
+ChatList.propTypes = {
+  chatList: PropTypes.array.isRequired,
 };
 
 export default ChatList;
