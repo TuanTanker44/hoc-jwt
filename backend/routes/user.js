@@ -21,5 +21,10 @@ router.post(
   middlewareController.verifyToken,
   userController.sendMessage
 );
+router.patch(
+  "/alterLastMessageWithChatId/:chatId",
+  middlewareController.verifyToken,
+  userController.alterLastMessageWithChatId
+);
 
 export default router;

@@ -139,17 +139,13 @@ const authController = {
       }
       const newAccessToken = authController.generateAccessToken(user);
       const newRefreshToken = authController.generateRefreshToken(user);
-      res.cookie("accessToken", newAccessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-      });
+      localStorage.setItem("accessToken", newRefreshToken);
       res.cookie("refreshToken", newRefreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: "none",
       });
-      res.status(200).json({ newAccessToken, newRefreshToken });
+      res.status(200).json({ newAccessToken });
     });
   },
 };

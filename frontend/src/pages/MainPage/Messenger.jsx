@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
-import socketIO from "socket.io-client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { io } from "socket.io-client";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useAuth } from "../../hooks/useAuth.js";
 import useAxios from "../../hooks/useAxios.js";
@@ -9,8 +9,15 @@ import ChatList from "../../components/Messenger/ChatItem/ChatList.jsx";
 import ChatHeader from "../../components/Messenger/ChatHeader/ChatHeader.jsx";
 import ChatMessages from "../../components/Messenger/ChatMessages/ChatMessages.jsx";
 import ChatInput from "../../components/Messenger/ChatInput/ChatInput.jsx";
+import { socket, disconnectSocket } from "../../socket/socket.js";
 
 const Messenger = () => {
+  // Kết nối socket khi component mount
+  useEffect(() => {
+    return () => {
+      disconnectSocket();
+    };
+  }, []);
   const axiosInstance = useAxios();
   const accessToken = localStorage.getItem("accessToken");
   const { currentUser, getChatItems } = useAuth();
@@ -18,9 +25,8 @@ const Messenger = () => {
   const [activeChatName, setActiveChatName] = useState("");
   const [chatList, setChatList] = useState([]);
   const [messages, setMessages] = useState([]);
-  const socket = useRef(null);
 
-  const handleActiveChange = (selectedChat, chatName, index) => {
+  const handleActiveChange = (selectedChat, chatName) => {
     setActiveChat(selectedChat);
     setActiveChatName(chatName);
   };
@@ -28,17 +34,36 @@ const Messenger = () => {
   const handleSendMessage = async (text) => {
     setMessages([...messages, { message: text, fromMe: true }]);
     try {
-      await axios.post(
+      const res = await axios.post(
         `http://localhost:5000/v1/message/chat/${activeChat.chatId}`,
         { message: text, senderId: currentUser._id },
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
+      const newMessage = res.data;
+      // Cập nhật lastMessage cho chatItem tương ứng
+      setChatList((prevChatList) =>
+        prevChatList.map((item) =>
+          item._id === activeChat._id
+            ? { ...item, lastMessage: newMessage._id }
+            : item,
+        ),
+      );
+      // Gọi API PATCH để cập nhật lastMessage trong DB
+      await axios.patch(
+        `http://localhost:5000/v1/user/alterLastMessageWithChatId/${activeChat.chatId}`,
+        { chatId: activeChat.chatId, lastMessage: newMessage._id },
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (socket.current && activeChat && currentUser) {
+        socket.current.emit("chat-message", {
+          chatId: activeChat.chatId,
+          senderId: currentUser._id,
+          message: text,
+        });
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
     }
-    // if (socket.current) {
-    //   socket.current.emit("send_message", { text: text, fromMe: true });
-    // }
   };
 
   const getChatName = useCallback(

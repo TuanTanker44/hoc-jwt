@@ -119,6 +119,23 @@ const userController = {
       res.status(500).json({ message: error.message });
     }
   },
+  alterLastMessageWithChatId: async (req, res) => {
+    try {
+      const { chatId, lastMessage } = req.body;
+
+      // Cập nhật lastMessage cho tất cả user có chatItem.chatId === roomId
+      await User.updateMany(
+        { "chatItems.chatId": chatId },
+        { $set: { "chatItems.$[elem].lastMessage": lastMessage } },
+        { arrayFilters: [{ "elem.chatId": chatId }] }
+      );
+
+      res.status(200).json("Update lastMessage successfully!");
+    } catch (error) {
+      console.error("Error in alterLastMessageWithChatId:", error);
+      res.status(500).json("Internal server error");
+    }
+  },
 };
 
 export default userController;
