@@ -1,6 +1,5 @@
 import Room from "../models/Room.js";
 import Message from "../models/Message.js";
-// Giả sử req.body có: { roomId, senderId, text }
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import dotenv from "dotenv";
