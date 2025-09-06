@@ -14,15 +14,40 @@ const AuthProvider = ({ children }) => {
 
       try {
         const meRes = await axios.get("http://localhost:5000/v1/user/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
         setCurrentUser(meRes.data);
       } catch (error) {
         console.error("Failed to fetch user profile:", error);
-        setCurrentUser(null);
+
+        // Nếu lỗi 401 -> thử refresh
+        if (error.response?.status === 401) {
+          try {
+            const refreshRes = await axios.post(
+              "http://localhost:5000/v1/auth/refresh",
+              {},
+              { withCredentials: true },
+            );
+
+            const newToken = refreshRes.data.accessToken;
+            localStorage.setItem("accessToken", newToken);
+
+            // Retry lại request /me
+            const meRes = await axios.get("http://localhost:5000/v1/user/me", {
+              headers: { Authorization: `Bearer ${newToken}` },
+              withCredentials: true,
+            });
+            setCurrentUser(meRes.data);
+          } catch (refreshError) {
+            console.error("Refresh failed:", refreshError);
+            setCurrentUser(null);
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login"; // Chỉ redirect nếu refresh cũng fail
+          }
+        } else {
+          setCurrentUser(null);
+        }
       }
     };
 

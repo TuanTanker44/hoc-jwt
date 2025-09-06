@@ -1,5 +1,9 @@
 /* eslint-disable no-unused-vars */
 import { io } from "socket.io-client";
+import {
+  PencilSquareIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/solid";
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -144,7 +148,23 @@ const Messenger = () => {
     <div className="messenger-container">
       {/* slidebar trái */}
       <div className="sidebar">
-        <div className="sidebar-header">Đoạn chat</div>
+        <div className="sidebar-header">
+          <div className="sidebar-title">
+            <span className="text-[30px]">Đoạn chat</span>
+            <div style={{ width: "40px", height: "40px" }}></div>
+            <button className="btn-new-chat" title="Đoạn chat mới">
+              <PencilSquareIcon style={{ width: "24px", height: "24px" }} />
+            </button>
+          </div>
+          <div className="relative w-full">
+            <MagnifyingGlassIcon className="absolute left-[5px] top-[60%] -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none w-[30px] h-[30px]" />
+            <input
+              type="text"
+              className="pl-10 mt-[10px] bg-[#E5E7EB] rounded-[20px] placeholder:text-[#B0B3B8] placeholder:italic placeholder:font-[500] h-[35px] font-[500] text-[20px] w-full pl-[40px]"
+              placeholder="Tìm kiếm đoạn chat..."
+            />
+          </div>
+        </div>
         <div className="chat-list">
           <ChatList chatList={chatList} onActiveChange={handleActiveChange} />
         </div>

@@ -1,21 +1,30 @@
 /* Input tin nhắn */
-.chat-input {
+.chat-input-form {
   display: flex;
   padding: 12px 16px;
   background-color: #fff;
   border-top: 1px solid #ddd;
+  overflow: hidden;
 }
 
-.chat-input input {
+.chat-input-form .chat-input {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.chat-input-form .chat-input-field {
+  width: 100%;
   flex: 1;
   padding: 10px 14px;
   border: 1px solid #ccc;
-  border-radius: 20px;
+  border-radius: 25px;
   outline: none;
   font-size: 18px;
 }
 
-.chat-input button {
+.chat-input-form .btn-send {
   margin-left: 10px;
   padding: 10px 20px;
   background-color: #0084ff;
@@ -25,6 +34,21 @@
   cursor: pointer;
 }
 
-.chat-input button:hover {
+.chat-input-form .btn-send:hover {
   background-color: #006fe0;
+}
+
+.chat-input-form .chat-input .btn-emoji {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  right: 0px;
+}
+
+.chat-input-form .chat-input .btn-emoji:hover {
+  background-color: #ffc94d;
 }

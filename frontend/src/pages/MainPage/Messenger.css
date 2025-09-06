@@ -17,7 +17,7 @@ body {
 
 /* Sidebar trái */
 .sidebar {
-  width: 280px;
+  width: 330px;
   background-color: #fff;
   border-right: 1px solid #ddd;
   display: flex;
@@ -48,4 +48,30 @@ body {
   .chat-section {
     flex: 1;
   }
+}
+
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-new-chat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  height: 45px;
+  background-color: #e5e7eb;
+  color: black;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: auto;
+}
+
+.btn-new-chat:hover {
+  background-color: #45a337;
 }
