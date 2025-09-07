@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-import { io } from "socket.io-client";
 import {
   PencilSquareIcon,
   MagnifyingGlassIcon,
@@ -13,15 +12,9 @@ import ChatList from "../../components/Messenger/ChatItem/ChatList.jsx";
 import ChatHeader from "../../components/Messenger/ChatHeader/ChatHeader.jsx";
 import ChatMessages from "../../components/Messenger/ChatMessages/ChatMessages.jsx";
 import ChatInput from "../../components/Messenger/ChatInput/ChatInput.jsx";
-import { socket, disconnectSocket } from "../../socket/socket.js";
+import socket from "../../socket/socket.js";
 
 const Messenger = () => {
-  // Kết nối socket khi component mount
-  useEffect(() => {
-    return () => {
-      disconnectSocket();
-    };
-  }, []);
   const axiosInstance = useAxios();
   const accessToken = localStorage.getItem("accessToken");
   const { currentUser, getChatItems } = useAuth();
@@ -35,8 +28,45 @@ const Messenger = () => {
     setActiveChatName(chatName);
   };
 
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("Connected:", socket.id);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeChat?.chatId) {
+      socket.emit("join-room", activeChat.chatId);
+      console.log("Emit join-room:", activeChat.chatId);
+    }
+
+    const handleMessage = (msg) => {
+      if (msg.chatId === activeChat?.chatId) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            message: msg.message,
+            fromMe: msg.senderId === currentUser._id,
+          },
+        ]);
+      }
+    };
+
+    socket.on("chat-message", handleMessage);
+
+    return () => {
+      socket.off("chat-message", handleMessage); // 👈 cleanup
+    };
+  }, [activeChat, currentUser]);
+
   const handleSendMessage = async (text) => {
-    setMessages([...messages, { message: text, fromMe: true }]);
+    if (!text.trim()) return;
+    socket.emit("chat-message", {
+      chatId: activeChat.chatId,
+      senderId: currentUser._id,
+      message: text,
+    });
+
     try {
       const res = await axios.post(
         `http://localhost:5000/v1/message/chat/${activeChat.chatId}`,
@@ -58,13 +88,6 @@ const Messenger = () => {
         { chatId: activeChat.chatId, lastMessage: newMessage._id },
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
-      if (socket.current && activeChat && currentUser) {
-        socket.current.emit("chat-message", {
-          chatId: activeChat.chatId,
-          senderId: currentUser._id,
-          message: text,
-        });
-      }
     } catch (error) {
       console.error("Failed to send message:", error);
     }

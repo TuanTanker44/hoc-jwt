@@ -1,18 +1,8 @@
 import { io } from "socket.io-client";
 
-const URL = "http://localhost:5000";
-
-export const socket = io(URL, {
-  withCredentials: true,
-  transports: ["websocket"],
-  auth: {
-    token: localStorage.getItem("token"),
-  },
+const socket = io("http://localhost:5000", {
+  autoConnect: true, // kết nối ngay khi import
+  transports: ["websocket"], // ưu tiên websocket
 });
 
-// Hàm chủ động ngắt kết nối socket
-export function disconnectSocket() {
-  if (socket && socket.connected) {
-    socket.disconnect();
-  }
-}
+export default socket;

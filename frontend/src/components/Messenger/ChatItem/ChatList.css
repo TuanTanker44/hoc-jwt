@@ -10,6 +10,10 @@
   cursor: pointer;
   border-radius: 10px;
   margin: 5px 0;
+  max-height: 74px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .chat-item:hover {
@@ -28,4 +32,8 @@
 .chat-preview {
   font-size: 14px;
   color: #555;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

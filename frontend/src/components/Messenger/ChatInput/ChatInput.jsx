@@ -3,6 +3,7 @@ import { useState } from "react";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
 import { FaceSmileIcon } from "@heroicons/react/24/outline";
+import { Mic, StopCircle, Play } from "lucide-react";
 
 const ChatInput = ({ onSendMessage }) => {
   const [input, setInput] = useState("");

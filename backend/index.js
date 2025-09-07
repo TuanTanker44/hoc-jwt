@@ -18,6 +18,7 @@ const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173", //cors: { origin: '*' } // Cho phép kết nối từ mọi nguồn (thay đổi cho production)
     credentials: true,
+    methods: ["GET", "POST"],
   },
 });
 
@@ -30,14 +31,21 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
+io.on("connect", (socket) => {
+  console.log("Client connected:", socket.id);
 
-  socket.on("sendMessage", (data) => {
-    io.emit("receiveMessage", data);
+  socket.on("join-room", (chatId) => {
+    socket.join(chatId);
+    console.log(`${socket.id} joined chat ${chatId}`);
   });
+
+  socket.on("chat-message", (msg) => {
+    console.log("Message from client:", msg);
+    io.to(msg.chatId).emit("chat-message", msg);
+  });
+
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("Client disconnected:", socket.id);
   });
 });
 
@@ -59,9 +67,6 @@ app.use("/v1/chat", roomRoute);
 
 connectDB();
 
-app.listen(5000, () => {
+server.listen(5000, () => {
   console.log("Server is running on http://localhost:5000");
 });
-app.get("/", (req, res) => {
-  res.send("test server ");
-} );
