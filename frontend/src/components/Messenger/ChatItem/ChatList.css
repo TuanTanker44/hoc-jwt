@@ -27,6 +27,9 @@
 .chat-name {
   font-weight: bold;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-preview {

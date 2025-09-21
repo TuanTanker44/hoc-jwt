@@ -98,7 +98,7 @@ const ChatInput = ({ onSendMessage }) => {
           <FaceSmileIcon className="text-[black] w-2/3 h-2/3 group-hover:text-[white]" />
         </button>
         {showPicker && (
-          <div className="absolute top-[-450px] z-10 right-[0px]">
+          <div className="absolute top-[-450px] right-[0px] z-50">
             <Picker data={data} onEmojiSelect={addEmoji} />
           </div>
         )}

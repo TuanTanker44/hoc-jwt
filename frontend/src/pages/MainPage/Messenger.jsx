@@ -2,8 +2,8 @@
 import {
   PencilSquareIcon,
   MagnifyingGlassIcon,
-} from "@heroicons/react/24/solid";
-import { useState, useEffect, useCallback } from "react";
+} from "@heroicons/react/24/solid"; //icons
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { useAuth } from "../../hooks/useAuth.js";
 import useAxios from "../../hooks/useAxios.js";
@@ -22,6 +22,18 @@ const Messenger = () => {
   const [activeChatName, setActiveChatName] = useState("");
   const [chatList, setChatList] = useState([]);
   const [messages, setMessages] = useState([]);
+  const messagesEndRef = useRef(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isNewChatPopupOpen, setIsNewChatPopupOpen] = useState(false);
+  const [newChatName, setNewChatName] = useState("");
+  const [newChatUser, setNewChatUser] = useState("");
+  const [activeToggle, setActiveToggle] = useState("user");
+  const [members, setMembers] = useState([
+    currentUser?.name ? currentUser.name : [],
+  ]); // members chứa tên user
+  const [usernameMembers, setUsernameMembers] = useState([
+    currentUser?.username ? currentUser.username : [],
+  ]);
 
   const handleActiveChange = (selectedChat, chatName) => {
     setActiveChat(selectedChat);
@@ -51,13 +63,20 @@ const Messenger = () => {
         ]);
       }
     };
-
     socket.on("chat-message", handleMessage);
-
     return () => {
       socket.off("chat-message", handleMessage); // 👈 cleanup
     };
   }, [activeChat, currentUser]);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: isInitialLoad ? "auto" : "smooth",
+      });
+      setIsInitialLoad(false); // sau lần đầu thì về false để các lần sau cuộn mượt
+    }
+  }, [messages, isInitialLoad]);
 
   const handleSendMessage = async (text) => {
     if (!text.trim()) return;
@@ -160,12 +179,101 @@ const Messenger = () => {
             fromMe: currentUser && msg.senderId === currentUser._id,
           })),
         );
+        setIsInitialLoad(true);
       } catch (err) {
         console.error("Lỗi lấy messages:", err);
       }
     };
     fetchMessages();
   }, [activeChat, currentUser, accessToken]);
+
+  const handleCreateNewChatItem = async () => {
+    if (activeToggle === "user") {
+      let usernames = [...usernameMembers];
+      if (newChatUser.trim()) {
+        const getUserByUsernameResponse = await axios.get(
+          `http://localhost:5000/v1/user/${newChatUser.trim()}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+        usernames.push(getUserByUsernameResponse.data.username);
+        setUsernameMembers(usernames);
+      }
+      try {
+        const userIds = await Promise.all(
+          usernames.map(async (username) => {
+            const res = await axios.get(
+              `http://localhost:5000/v1/user/${username}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } },
+            );
+            if (res.status !== 200) {
+              throw new Error("User not found");
+            }
+            return res.data._id;
+          }),
+        );
+
+        // Tạo phòng
+        const createChatResponse = await axios.post(
+          "http://localhost:5000/v1/chat/create",
+          {
+            isGroup: false,
+            name: newChatName,
+            participants: userIds,
+          },
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+
+        // Tạo chat item
+        await axios.patch(
+          "http://localhost:5000/v1/user/createNewChatItem",
+          { userIds: userIds, roomId: createChatResponse.data._id },
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+      } catch (error) {
+        console.error("Failed to create new chat/conversation:", error);
+      }
+    } else {
+      if (members.length === 1) {
+        alert("Vui lòng thêm ít nhất một thành viên.");
+        return;
+      }
+      // Đổi username sang userId
+      try {
+        const userIds = await Promise.all(
+          usernameMembers.map(async (username) => {
+            const res = await axios.get(
+              `http://localhost:5000/v1/user/${username}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } },
+            );
+            if (res.status !== 200) {
+              throw new Error("User not found");
+            }
+            return res.data._id;
+          }),
+        );
+
+        // Tạo phòng
+        const createChatResponse = await axios.post(
+          "http://localhost:5000/v1/chat/create",
+          {
+            isGroup: (activeToggle === "group" && members.length > 2) || false,
+            name: newChatName,
+            participants: userIds,
+          },
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+
+        // Tạo chat item
+        await axios.patch(
+          "http://localhost:5000/v1/user/createNewChatItem",
+          { userIds: userIds, roomId: createChatResponse.data._id },
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+      } catch (error) {
+        console.error("Failed to create new chat/conversation:", error);
+      }
+    }
+  };
 
   return (
     <div className="messenger-container">
@@ -175,9 +283,173 @@ const Messenger = () => {
           <div className="sidebar-title">
             <span className="text-[30px]">Đoạn chat</span>
             <div style={{ width: "40px", height: "40px" }}></div>
-            <button className="btn-new-chat" title="Đoạn chat mới">
+            <button
+              className="btn-new-chat"
+              title="Đoạn chat mới"
+              onClick={() => {
+                setIsNewChatPopupOpen(true);
+                setActiveToggle("user");
+                setNewChatUser("");
+                setNewChatName("");
+                setMembers([currentUser?.name ? currentUser.name : []]);
+                setUsernameMembers(
+                  currentUser?.username ? [currentUser.username] : [],
+                );
+              }}
+            >
               <PencilSquareIcon style={{ width: "24px", height: "24px" }} />
             </button>
+            {isNewChatPopupOpen && (
+              <div
+                className="new-chat-popup-overlay"
+                onClick={setIsNewChatPopupOpen(false)}
+              >
+                <div
+                  className="toggle-container"
+                  onClick={(e) => e.stopPropagation()} // ngăn đóng khi click bên trong
+                >
+                  <div className="new-chat-popup-content">
+                    <div className="toggle-selection">
+                      <button
+                        className={`toggle-option${activeToggle === "user" ? " active" : ""}`}
+                        onClick={() => {
+                          setActiveToggle("user");
+                          setNewChatUser("");
+                          setNewChatName("");
+                          setMembers([
+                            currentUser?.name ? currentUser.name : [],
+                          ]);
+                          setUsernameMembers(
+                            currentUser?.username ? [currentUser.username] : [],
+                          );
+                        }}
+                      >
+                        User
+                      </button>
+                      <button
+                        className={`toggle-option${activeToggle === "group" ? " active" : ""}`}
+                        onClick={() => {
+                          setActiveToggle("group");
+                          setNewChatUser("");
+                          setNewChatName("");
+                          setMembers([
+                            currentUser?.name ? currentUser.name : [],
+                          ]);
+                          setUsernameMembers(
+                            currentUser?.username ? [currentUser.username] : [],
+                          );
+                        }}
+                      >
+                        Group
+                      </button>
+                    </div>
+                    <div
+                      className={`toggle${activeToggle === "user" ? " active" : ""}`}
+                    >
+                      <form className="flex flex-col gap-y-[15px]">
+                        <label htmlFor="new-chat-user">Tên người dùng</label>
+                        <input
+                          className="border-[2px] border-[#0866FF] pl-[10px] pt-[5px] pb-[5px] placeholder:italic placeholder:font-[400]"
+                          type="text"
+                          id="new-chat-user"
+                          value={newChatUser}
+                          onChange={(e) => setNewChatUser(e.target.value)}
+                          placeholder="Nhập tên người dùng"
+                        />
+                      </form>
+                    </div>
+                    <div
+                      className={`toggle${activeToggle === "group" ? " active" : ""}`}
+                    >
+                      <form className="flex flex-col gap-y-[15px]">
+                        <label htmlFor="new-chat-name">Tên đoạn chat</label>
+                        <input
+                          className="border-[2px] border-[#0866FF] pl-[10px] pt-[5px] pb-[5px] placeholder:italic placeholder:font-[400]"
+                          type="text"
+                          id="new-chat-name"
+                          value={newChatName}
+                          onChange={(e) => setNewChatName(e.target.value)}
+                          placeholder="Nhập tên đoạn chat (tùy chọn)"
+                        />
+                        <label htmlFor="new-chat-user">Thêm người dùng</label>
+                        <input
+                          className="border-[2px] border-[#0866FF] pl-[10px] pt-[5px] pb-[5px] placeholder:italic placeholder:font-[400]"
+                          type="text"
+                          id="new-chat-user"
+                          value={newChatUser}
+                          onChange={(e) => setNewChatUser(e.target.value)}
+                          placeholder="Nhập tên người dùng"
+                        />
+                        <button
+                          type="button"
+                          className="bg-[#0866FF] hover:bg-[#0866FF] hover:text-[white] width-[100px] h-[30px] rounded-[20px]"
+                          onClick={async () => {
+                            if (newChatUser.trim()) {
+                              //get user id by username
+                              const getUserByUsernameResponse = await axios.get(
+                                `http://localhost:5000/v1/user/${newChatUser.trim()}`,
+                                {
+                                  headers: {
+                                    Authorization: `Bearer ${accessToken}`,
+                                  },
+                                },
+                              );
+                              setMembers((prev) => [
+                                ...prev,
+                                getUserByUsernameResponse.data.name,
+                              ]);
+                              setUsernameMembers((prev) => [
+                                ...prev,
+                                getUserByUsernameResponse.data.username,
+                              ]);
+                              setNewChatUser("");
+                            }
+                          }}
+                        >
+                          Thêm
+                        </button>
+                        <p>Thành viên</p>
+                        <div className="member-container border-[2px] border-[#0866FF] pl-[10px] pt-[5px] pb-[5px] min-h-[40px] max-h-[100px] overflow-y-auto">
+                          {members.length === 1 ? (
+                            <div className="font-[400] text-[#fd6b6b] ">
+                              {members[0]}
+                            </div>
+                          ) : (
+                            members.map((member, index) => (
+                              <div
+                                key={index}
+                                className="font-[400] text-[#fd6b6b] "
+                              >
+                                {member}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </form>
+                    </div>
+                    <div className="button-container mt-[5px]">
+                      <button
+                        onClick={() => {
+                          setIsNewChatPopupOpen(false)();
+                        }}
+                        className="btn-close-new-chat-popup hover:bg-[#ff0000]"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleCreateNewChatItem();
+                          setIsNewChatPopupOpen(false)();
+                        }}
+                        className="btn-create-new-chat hover:bg-[#00b442]"
+                      >
+                        Tạo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="relative w-full">
             <MagnifyingGlassIcon className="absolute left-[5px] top-[60%] -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none w-[30px] h-[30px]" />
@@ -196,7 +468,10 @@ const Messenger = () => {
       {/* khung chat */}
       <div className="chat-section">
         <ChatHeader chatHeader={activeChatName || "Đang tải..."} />
-        <ChatMessages messages={messages} />
+        <div className="chat-messages-wrapper">
+          <ChatMessages messages={messages} />
+          <div ref={messagesEndRef} />
+        </div>
         <ChatInput onSendMessage={handleSendMessage} />
       </div>
     </div>

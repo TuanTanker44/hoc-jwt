@@ -26,5 +26,15 @@ router.patch(
   middlewareController.verifyToken,
   userController.alterLastMessageWithChatId
 );
+router.patch(
+  "/createNewChatItem",
+  middlewareController.verifyToken,
+  userController.createNewChatItem
+);
+router.get(
+  "/:username",
+  middlewareController.verifyToken,
+  userController.getUserByUsername
+);
 
 export default router;

@@ -36,7 +36,14 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
   background-color: #e5e7eb;
+}
+
+.chat-messages-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  z-index: 10;
 }
 
 /* Responsive */
@@ -74,4 +81,92 @@ body {
 
 .btn-new-chat:hover {
   background-color: #45a337;
+}
+
+/* nền mờ */
+.new-chat-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.toggle-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-selection {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.toggle-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  cursor: pointer;
+  background-color: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+.toggle-option.active {
+  background-color: #2563eb;
+  color: white;
+}
+
+.toggle {
+  display: none;
+}
+
+.toggle.active {
+  display: block;
+}
+
+/* khung popup */
+.new-chat-popup-content {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  text-align: center;
+}
+
+.btn-close-new-chat-popup {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+
+  color: white;
+  cursor: pointer;
+}
+
+.btn-close-new-chat-popup {
+  background: #ef4444;
+  margin-top: 12px;
+}
+
+.btn-create-new-chat {
+  background: #22c55e;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  margin-top: 12px;
+  margin-left: 10px;
 }
