@@ -9,5 +9,14 @@ router.get(
   middlewareController.verifyToken,
   roomController.getRoomById
 );
-
+router.post(
+  "/create",
+  middlewareController.verifyToken,
+  roomController.createNewRoom
+);
+router.get(
+  "/:chatId/participants",
+  middlewareController.verifyToken,
+  roomController.getParticipant
+);
 export default router;

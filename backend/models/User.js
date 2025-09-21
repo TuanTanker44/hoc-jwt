@@ -40,6 +40,7 @@ const userSchema = new mongoose.Schema(
         lastMessage: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Message",
+          default: null,
         },
         timestamp: {
           type: Date,

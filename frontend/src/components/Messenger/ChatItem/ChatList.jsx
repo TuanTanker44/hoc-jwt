@@ -32,9 +32,11 @@ const ChatList = ({ chatList, onActiveChange }) => {
       );
       const isGroup = response.data.isGroup;
       const chatName = isGroup
-        ? response.data.name
-        : response.data.participants.find((p) => p._id !== currentUser._id)
-            .name;
+        ? response.data.name ||
+          response.data.participants.map((element) => element.name).join(", ")
+        : response.data.participants.find(
+            (p) => String(p._id) !== String(currentUser._id),
+          )?.name;
       return chatName;
     } catch (error) {
       console.error("Failed to fetch chat name:", error);
@@ -48,7 +50,7 @@ const ChatList = ({ chatList, onActiveChange }) => {
         `http://localhost:5000/v1/message/${messageId}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
-      return response.data.message;
+      return response.data;
     } catch (error) {
       console.error("Failed to fetch last message:", error);
       return "Chưa có tin nhắn nào";
@@ -70,10 +72,17 @@ const ChatList = ({ chatList, onActiveChange }) => {
 
       await Promise.all(
         chatList.map(async (chat) => {
-          const name = await getChatName(chat.chatId);
+          const name =
+            (await getChatName(chat.chatId)) || "Người dùng không khả dụng";
           const lastMsg = await getLastMessage(chat.lastMessage);
           names[chat.chatId] = name;
-          messages[chat.chatId] = lastMsg;
+          if (lastMsg && lastMsg.senderId === currentUser._id) {
+            messages[chat.chatId] = `Bạn: ${lastMsg.message}`;
+          } else if (lastMsg && lastMsg.message) {
+            messages[chat.chatId] = lastMsg.message;
+          } else {
+            messages[chat.chatId] = "Chưa có tin nhắn nào";
+          }
         }),
       );
 

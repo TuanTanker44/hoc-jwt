@@ -30,6 +30,19 @@ const userController = {
     }
   },
 
+  getUserByUsername: async (req, res) => {
+    try {
+      const username = req.params.username;
+      const user = await User.findOne({ username: username });
+      if (!user) {
+        return res.status(404).json("User not found!");
+      }
+      res.status(200).json(user);
+    } catch (error) {
+      res.status(500).json("Error fetching user!");
+    }
+  },
+
   deleteUser: async (req, res) => {
     try {
       //  /:id
@@ -132,6 +145,29 @@ const userController = {
       res.status(200).json("Update lastMessage successfully!");
     } catch (error) {
       console.error("Error in alterLastMessageWithChatId:", error);
+      res.status(500).json("Internal server error");
+    }
+  },
+  createNewChatItem: async (req, res) => {
+    try {
+      const { userIds, roomId } = req.body;
+
+      // Cập nhật vào chatItems các user với roomId mới
+      await User.updateMany(
+        { _id: { $in: userIds } },
+        {
+          $push: {
+            chatItems: {
+              chatId: roomId,
+              lastMessage: null,
+              timestamp: new Date(),
+            },
+          },
+        }
+      );
+
+      res.status(201).json("Updated to: " + userIds);
+    } catch (error) {
       res.status(500).json("Internal server error");
     }
   },
